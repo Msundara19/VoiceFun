@@ -1,0 +1,22 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>VoiceFun Patched</title>
+</head>
+<body>
+    <h2>🎵 VoiceFun — Cartoonify My Voice</h2>
+    <form id="uploadForm" enctype="multipart/form-data" method="post" action="/process">
+        <label>Upload Audio:</label>
+        <input type="file" name="audio" accept=".wav,.ogg,.flac" required><br><br>
+
+        <label>Pitch shift (semitones):</label>
+        <input type="number" name="pitch" value="0" min="-12" max="12"><br><br>
+
+        <label>Speed (time stretch):</label>
+        <input type="number" step="0.1" name="speed" value="1.0" min="0.5" max="2.0"><br><br>
+
+        <button type="submit">Process</button>
+    </form>
+</body>
+</html>
