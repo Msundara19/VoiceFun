@@ -1,90 +1,52 @@
-# app.py — multi-format audio support + clear errors
-from flask import Flask, render_template, request, send_file, jsonify
-from werkzeug.utils import secure_filename
-import numpy as np
-import librosa
-import soundfile as sf
-import os
-import uuid
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>VoiceFun — Cartoonify My Voice</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 720px; margin: 32px auto; }
+    fieldset { margin-top: 16px; }
+    label { display: block; margin: 8px 0 4px; }
+    input[type="number"], input[type="range"] { width: 100%; }
+    button { margin-top: 16px; padding: 10px 16px; }
+  </style>
+</head>
+<body>
+  <h2>🎙️ VoiceFun — Cartoonify My Voice</h2>
+  <p>Upload a short <b>WAV</b> (≤25s recommended), tweak settings, and download the transformed clip.</p>
 
-app = Flask(__name__)
+  <form id="uploadForm" enctype="multipart/form-data" method="post" action="/process">
+    <label>Upload Audio (WAV only)</label>
+    <input type="file" name="audio" accept=".wav" required>
 
-# where uploads/outputs live
-UPLOAD_FOLDER = 'uploads'
-OUTPUT_FOLDER = 'outputs'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+    <fieldset>
+      <legend>Core</legend>
+      <label>Pitch shift (semitones)</label>
+      <input type="number" name="pitch" value="0" min="-12" max="12" step="1">
+      <label>Speed (time-stretch)</label>
+      <input type="number" name="speed" value="1.0" min="0.5" max="2.0" step="0.05">
+      <label>Max length to process (seconds)</label>
+      <input type="number" name="trim" value="25" min="5" max="60" step="1">
+    </fieldset>
 
-# allow common formats; we'll decode with librosa (audioread) and always export WAV
-ALLOWED_EXTENSIONS = {'wav', 'mp3', 'm4a', 'ogg', 'flac'}
-MAX_SECONDS = 25        # auto-trim for snappy processing
-TARGET_SR = 44100       # resample target
+    <fieldset>
+      <legend>Fun effects</legend>
+      <label><input type="checkbox" name="robot"> Robot (ring modulation)</label>
+      <label>Robot frequency (Hz)</label>
+      <input type="number" name="robot_freq" value="30" min="10" max="80" step="1">
 
-def allowed_file(filename: str) -> bool:
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+      <label><input type="checkbox" name="echo"> Echo</label>
+      <label>Echo delay (ms)</label>
+      <input type="number" name="echo_delay" value="250" min="50" max="800" step="10">
+      <label>Echo decay</label>
+      <input type="number" name="echo_decay" value="0.4" min="0.1" max="0.9" step="0.05">
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+      <label><input type="checkbox" name="telephone"> Telephone (band-pass 300–3400 Hz)</label>
+    </fieldset>
 
-@app.route('/process', methods=['POST'])
-def process():
-    try:
-        if 'audio' not in request.files:
-            return jsonify({"error": "No file part named 'audio' in request"}), 400
-        file = request.files['audio']
-        if file.filename == '':
-            return jsonify({"error": "No file selected"}), 400
-        if not allowed_file(file.filename):
-            return jsonify({"error": f"Unsupported format. Allowed: {', '.join(sorted(ALLOWED_EXTENSIONS))}"}), 400
+    <button type="submit">Process & Download</button>
+  </form>
 
-        # save upload
-        safe_name = secure_filename(file.filename)
-        ext = safe_name.rsplit('.', 1)[1].lower()
-        input_path = os.path.join(UPLOAD_FOLDER, f"{uuid.uuid4()}.{ext}")
-        file.save(input_path)
-
-        # parameters
-        try:
-            pitch_shift = float(request.form.get('pitch', 0))
-        except:
-            pitch_shift = 0.0
-        try:
-            speed = float(request.form.get('speed', 1.0))
-            if speed <= 0:
-                speed = 1.0
-        except:
-            speed = 1.0
-
-        # decode (supports mp3/m4a/ogg/wav/flac), mono + resample
-        y, sr = librosa.load(input_path, sr=TARGET_SR, mono=True)
-
-        # auto-trim for speed
-        max_len = int(MAX_SECONDS * sr)
-        if len(y) > max_len:
-            y = y[:max_len]
-
-        # process: pitch then time-stretch
-        if pitch_shift != 0:
-            y = librosa.effects.pitch_shift(y, sr=sr, n_steps=pitch_shift)
-        if speed != 1.0 and len(y) > sr * 0.1:
-            y = librosa.effects.time_stretch(y, rate=speed)
-
-        # normalize a bit
-        peak = np.max(np.abs(y)) + 1e-9
-        y = (0.98 / peak) * y
-
-        # export as WAV
-        out_path = os.path.join(OUTPUT_FOLDER, f"{uuid.uuid4()}.wav")
-        sf.write(out_path, y, sr)
-
-        # send back as download
-        return send_file(out_path, mimetype="audio/wav", as_attachment=True, download_name="voicefun_output.wav")
-
-    except Exception as e:
-        # return readable error to the page / devtools
-        return jsonify({"error": f"{type(e).__name__}: {e}"}), 500
-
-if __name__ == '__main__':
-    # run local
-    app.run(host="127.0.0.1", port=5000, debug=True)
+  <p><small>Tips: Chipmunk = pitch +8, speed 1.1; Darth = pitch −6, speed 0.9, Echo on.</small></p>
+</body>
+</html>
