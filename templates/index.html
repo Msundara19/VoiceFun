@@ -8,8 +8,8 @@
     <h2>🎵 VoiceFun — Cartoonify My Voice</h2>
     <form id="uploadForm" enctype="multipart/form-data" method="post" action="/process">
         <label>Upload Audio:</label>
-        <input type="file" name="audio" accept=".wav,.ogg,.flac" required><br><br>
-
+        <input type="file" name="audio" accept=".wav,.mp3,.m4a,.ogg,.flac" required><br><br>
+        <p><small>Accepted: WAV, MP3, M4A, OCG, FLAC(auto-trimmed to ~25s)</small></p>
         <label>Pitch shift (semitones):</label>
         <input type="number" name="pitch" value="0" min="-12" max="12"><br><br>
 
